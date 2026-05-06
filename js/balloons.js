@@ -72,12 +72,12 @@ export function loadKnightModel() {
     );
 }
 
-// ── 加载气球船模型 ──
+// ── 加载鲲鹏模型（替代气球船）──
 export function loadShipModel() {
     gltfLoader.load(
-        'Model/气球船.glb',
+        'Model/鲲鹏.glb',
         (gltf) => {
-            console.log('✅ 气球船.glb 加载成功');
+            console.log('✅ 鲲鹏.glb 加载成功');
             shipModel = gltf.scene;
             shipModel.scale.setScalar(SHIP_SCALE);
             shipModel.position.set(...SHIP_POS);
@@ -97,7 +97,7 @@ export function loadShipModel() {
             }
         },
         (error) => {
-            console.warn('⚠️ 气球船.glb 未找到，跳过气球船模型');
+            console.warn('⚠️ 鲲鹏.glb 未找到，跳过鲲鹏模型');
         }
     );
 }

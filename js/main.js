@@ -191,7 +191,7 @@ async function initScene() {
 
     _log('5/6 设置手柄...');
     // 6. 设置手柄（回调中附加 UI 面板）
-    setupController(0, (grip) => {
+    setupController(0, null, (grip) => {
         // 左手柄就绪 → 附加左手面板
         const leftPanel = createLeftDebugPanel();
         grip.add(leftPanel);
