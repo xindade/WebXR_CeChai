@@ -1,7 +1,17 @@
 // ==================== 场景核心：渲染器 / 场景 / 相机 / dolly / 灯光 / 装饰云 ====================
 import * as THREE from 'three';
 import { createCloudMesh, createGlowTexture } from './utils.js';
-import { skyPresets } from './config.js';
+import {
+    skyPresets,
+    CAMERA_FOV, CAMERA_NEAR, CAMERA_FAR, CAMERA_HEIGHT,
+    SKY_DOME_RADIUS, SKY_DOME_SEGMENTS, SKY_DOME_RINGS,
+    SKY_DOME_PHI_START, SKY_DOME_PHI_LENGTH,
+    SKY_DOME_THETA_START, SKY_DOME_THETA_LENGTH,
+    STAR_LAYER_COUNT, STAR_BASE_COUNT, STAR_COUNT_INCREMENT,
+    STAR_MIN_DIST, STAR_DIST_INCREMENT, STAR_DIST_LAYER_OFFSET,
+    STAR_MIN_SIZE, STAR_SIZE_INCREMENT,
+    SUN_SHADOW_MAP_SIZE, SUN_SHADOW_NEAR, SUN_SHADOW_FAR, SUN_SHADOW_BOUNDS
+} from './config.js';
 
 // ── 核心对象（模块级导出，供其他模块引用）──
 export let renderer;
@@ -57,34 +67,38 @@ export function initSceneCore() {
     renderer.setClearColor(new THREE.Color(skyPresets.day.bg));
 
     // ── 相机 + dolly ──
-    camera = new THREE.PerspectiveCamera(72, window.innerWidth / window.innerHeight, 0.1, 200);
-    camera.position.set(0, 1.6, 0); // <-- 玩家眼高(米)，改这里调整身高
+    camera = new THREE.PerspectiveCamera(CAMERA_FOV, window.innerWidth / window.innerHeight, CAMERA_NEAR, CAMERA_FAR);
+    camera.position.set(0, CAMERA_HEIGHT, 0); // <-- 玩家眼高(米)，改这里调整身高
     dolly = new THREE.Group();
     dolly.add(camera);
     scene.add(dolly);
 
     // ── 天空穹顶 ──
-    const skyDomeGeo = new THREE.SphereGeometry(60, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+    const skyDomeGeo = new THREE.SphereGeometry(
+        SKY_DOME_RADIUS, SKY_DOME_SEGMENTS, SKY_DOME_RINGS,
+        SKY_DOME_PHI_START, SKY_DOME_PHI_LENGTH,
+        SKY_DOME_THETA_START, SKY_DOME_THETA_LENGTH
+    );
     skyDomeMat = new THREE.MeshBasicMaterial({
         color: skyPresets.day.skyDome, side: THREE.BackSide, depthWrite: false
     });
     skyDome = new THREE.Mesh(skyDomeGeo, skyDomeMat);
-    skyDome.position.y = 1.6;
+    skyDome.position.y = CAMERA_HEIGHT;
     dolly.add(skyDome);
 
     // ── 星空粒子（3层，由 sky.js 驱动可见性）──
     const starTex = createGlowTexture('white', 'rgba(180,200,255,0.6)', 64);
-    for (let layer = 0; layer < 3; layer++) {
+    for (let layer = 0; layer < STAR_LAYER_COUNT; layer++) {
         const starGeo = new THREE.BufferGeometry();
-        const count = 80 + layer * 50;
+        const count = STAR_BASE_COUNT + layer * STAR_COUNT_INCREMENT;
         const positions = new Float32Array(count * 3);
         const twinkleData = new Float32Array(count * 2);
         for (let i = 0; i < count; i++) {
             const theta = Math.random() * Math.PI * 2;
             const phi = Math.pow(Math.random(), 2.5) * Math.PI * 0.48;
-            const r = 48 + Math.random() * 4 + layer * 1.5;
+            const r = STAR_MIN_DIST + Math.random() * STAR_DIST_INCREMENT + layer * STAR_DIST_LAYER_OFFSET;
             positions[i * 3] = Math.sin(phi) * Math.cos(theta) * r;
-            positions[i * 3 + 1] = Math.cos(phi) * r + 1.6;
+            positions[i * 3 + 1] = Math.cos(phi) * r + CAMERA_HEIGHT;
             positions[i * 3 + 2] = Math.sin(phi) * Math.sin(theta) * r;
             twinkleData[i * 2] = Math.random() * Math.PI * 2;
             twinkleData[i * 2 + 1] = 0.3 + Math.random() * 1.5;
@@ -93,7 +107,7 @@ export function initSceneCore() {
         const starMat = new THREE.PointsMaterial({
             map: starTex,
             color: 0xffffff,
-            size: 0.35 + layer * 0.1,
+            size: STAR_MIN_SIZE + layer * STAR_SIZE_INCREMENT,
             transparent: true,
             opacity: 0,
             depthWrite: false,
@@ -109,14 +123,14 @@ export function initSceneCore() {
     sunLight = new THREE.DirectionalLight(skyPresets.day.sun, skyPresets.day.sunI);
     sunLight.position.set(skyPresets.day.sunX, skyPresets.day.sunY, skyPresets.day.sunZ);
     sunLight.castShadow = true;
-    sunLight.shadow.mapSize.width = 2048;
-    sunLight.shadow.mapSize.height = 2048;
-    sunLight.shadow.camera.near = 0.5;
-    sunLight.shadow.camera.far = 100;
-    sunLight.shadow.camera.left = -30;
-    sunLight.shadow.camera.right = 30;
-    sunLight.shadow.camera.top = 30;
-    sunLight.shadow.camera.bottom = -30;
+    sunLight.shadow.mapSize.width = SUN_SHADOW_MAP_SIZE;
+    sunLight.shadow.mapSize.height = SUN_SHADOW_MAP_SIZE;
+    sunLight.shadow.camera.near = SUN_SHADOW_NEAR;
+    sunLight.shadow.camera.far = SUN_SHADOW_FAR;
+    sunLight.shadow.camera.left = -SUN_SHADOW_BOUNDS;
+    sunLight.shadow.camera.right = SUN_SHADOW_BOUNDS;
+    sunLight.shadow.camera.top = SUN_SHADOW_BOUNDS;
+    sunLight.shadow.camera.bottom = -SUN_SHADOW_BOUNDS;
     scene.add(sunLight);
 
     // ── 环境光 & 半球光 ──
