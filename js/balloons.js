@@ -4,6 +4,7 @@ import { scene, dolly, camera, balloonTex, isBalloonTexLoaded } from './scene.js
 import { bullets } from './weapons.js';
 import { playBalloonPopSound } from './audio.js';
 import { spawnParticles } from './particles.js';
+import { spawnDebris } from './debris.js';
 import { gltfLoader } from './weapons.js';
 import {
     BALLOON_COUNT, BALLOON_HP, BALLOON_SPEED, BALLOON_SPAWN_RADIUS,
@@ -45,6 +46,7 @@ let onBalloonShipCollision = null;
 export let waveSpawnRemaining = 0;
 export let wavePhaseTimer = 0;
 let spawnBatchCooldown = 0;
+let gameStartForwardAngle = null; // 首次生成时的玩家正方向
 
 export function setPlayerStatsRef(stats) { playerStats = stats; }
 export function setChoiceCardsActiveRef(ref) { choiceCardsActiveRef = ref; }
@@ -165,6 +167,12 @@ export function spawnBalloons() {
     waveSpawnRemaining = WAVE_BASE_SPAWN_COUNT + waveNumber * 5;
     wavePhaseTimer = 0;
     spawnBatchCooldown = 0;
+
+    // 首次生成时锁定正方向（固定玩家出生朝向，不随转头变化）
+    if (gameStartForwardAngle === null) {
+        const camDir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
+        gameStartForwardAngle = Math.atan2(camDir.x, camDir.z);
+    }
 }
 
 /**
@@ -196,11 +204,9 @@ export function updateWaveSpawning(dt) {
     const batchSize = Math.min(SPAWN_BATCH_SIZE, waveSpawnRemaining);
     for (let i = 0; i < batchSize; i++) {
         let angle;
-        if (angleRange < Math.PI * 2) {
-            // 前方限定模式：以相机方向为基准
-            const camDir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-            const forwardAngle = Math.atan2(camDir.x, camDir.z);
-            angle = forwardAngle + (Math.random() - 0.5) * angleRange;
+        if (angleRange < Math.PI * 2 && gameStartForwardAngle !== null) {
+            // 前方限定模式：以出生时的固定朝向为基准
+            angle = gameStartForwardAngle + (Math.random() - 0.5) * angleRange;
         } else {
             angle = Math.random() * Math.PI * 2;
         }
@@ -314,6 +320,10 @@ export function checkBulletBalloonCollisions() {
 
                 if (balloon.userData.hp <= 0) {
                     balloon.userData.active = false;
+                    // 碎片 + 粒子 + 音效
+                    const pos = balloon.position.clone();
+                    const debColor = balloon.userData.isKnight ? 0xff8844 : 0xffaa44;
+                    spawnDebris(pos, debColor, balloon.userData.isKnight ? 12 : 6);
                     if (balloon.userData.isKnight) {
                         balloon.traverse(c => { if (c.isMesh) c.visible = false; });
                     } else {

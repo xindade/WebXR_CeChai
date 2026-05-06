@@ -40,8 +40,8 @@ export function createPromptSprite() {
     const canvas = document.createElement('canvas');
     canvas.width = 512; canvas.height = 128;
     const ctx = canvas.getContext('2d');
-    ctx.fillStyle = 'rgba(0,0,0,0.7)';
-    ctx.fillRect(0, 0, 512, 128);
+    ctx.fillStyle = 'transparent';
+    ctx.clearRect(0, 0, 512, 128);
     ctx.fillStyle = '#ffd700';
     ctx.font = 'bold 36px "Microsoft YaHei", sans-serif';
     ctx.textAlign = 'center';
@@ -53,7 +53,7 @@ export function createPromptSprite() {
     const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false });
     const s = new THREE.Sprite(mat);
     s.scale.set(...BUDDHA_PROMPT_SCALE);
-    s.visible = false;
+    s.visible = false; // 倒计时显示在左手腕面板
     return s;
 }
 
@@ -112,7 +112,7 @@ export function enterAimingMode() {
         previewPalm.visible = true;
         previewPalm.position.set(...BUDDHA_PREVIEW_POS);
     }
-    if (promptSprite) promptSprite.visible = true;
+    // 倒计时显示在左手腕面板
     console.log('🎯 瞄准：再按握柄释放，或' + AIM_TIMEOUT + '秒自动');
 }
 
@@ -162,23 +162,7 @@ export function updateBuddhaPalmSkills(dt) {
             offset.y = BUDDHA_PREVIEW_Y;
             previewPalm.position.copy(offset);
         }
-        if (promptSprite && promptSprite.visible && buddhaPalmTimer > 0) {
-            const remain = Math.ceil(buddhaPalmTimer);
-            const cvs = promptSprite.material.map.source.data;
-            if (cvs) {
-                const c = cvs.getContext('2d');
-                c.fillStyle = 'rgba(0,0,0,0.7)';
-                c.fillRect(0, 0, 512, 128);
-                c.fillStyle = '#ffd700';
-                c.font = 'bold 36px "Microsoft YaHei", sans-serif';
-                c.textAlign = 'center';
-                c.fillText('🖐 再按握柄释放如来神掌', 256, 55);
-                c.fillStyle = '#aaa';
-                c.font = '24px "Microsoft YaHei", sans-serif';
-                c.fillText('或 ' + remain + ' 秒后自动释放', 256, 95);
-                promptSprite.material.map.needsUpdate = true;
-            }
-        }
+        // 倒计时在左手腕面板显示（ui.js updateLeftDebugPanel）
         if (buddhaPalmTimer <= 0) releaseBuddhaPalm();
     }
 

@@ -106,7 +106,6 @@ export function updateDebugPanel() {
     const remainStr = waveSpawnRemaining > 0 ? `${waveSpawnRemaining}待生成` : '已生成完毕';
     let lines = [
         `🚢 船血 ${shipHpVal}/${SHIP_MAX_HP}`,
-        `❤️ 玩家HP ${playerStatsRef.hp}`,
         `🎯 得分 ${playerStatsRef.score}`,
         `⚔️ 攻击 ${playerStatsRef.atk}`,
         `🎈 气球 ${activeBalloons}/${BALLOON_COUNT}`,
@@ -193,11 +192,32 @@ function drawLeftDebugPanel(info) {
 export function updateLeftDebugPanel() {
     if (!leftGrip || !leftDebugPanel) return;
 
+    // 瞄准模式：显示超大倒计时数字
+    if (buddhaPalmState === 'AIMING' && buddhaPalmTimer > 0) {
+        if (!leftDebugCtx) return;
+        const c = leftDebugCtx;
+        const w = leftDebugCanvas.width;
+        const h = leftDebugCanvas.height;
+        c.clearRect(0, 0, w, h);
+
+        const remain = Math.ceil(buddhaPalmTimer);
+        // 数字越大，字号越小（5→96px, 1→180px, 0→消失）
+        const fontSize = Math.min(180, 96 + (5 - remain) * 21);
+        c.fillStyle = '#ffd700';
+        c.font = `bold ${fontSize}px "Microsoft YaHei", sans-serif`;
+        c.textAlign = 'center';
+        c.textBaseline = 'middle';
+        c.fillText(remain + '', w / 2, h / 2);
+
+        if (leftDebugTexture) leftDebugTexture.needsUpdate = true;
+        return;
+    }
+
     const cdSec = Math.max(0, buddhaPalmCooldown).toFixed(1);
     const unlockStr = buddhaPalmReady ? '✅ 已解锁' : '🔒 未解锁';
     let aimStr = '';
     if (buddhaPalmState === 'AIMING') {
-        aimStr = `🎯 瞄准中 ${Math.ceil(buddhaPalmTimer)}秒`;
+        // 倒计时已在上面超大数字显示
     } else if (buddhaPalmState === 'SLAMMING') {
         aimStr = '🖐 神掌释放中!';
     } else if (buddhaPalmState === 'IDLE' && buddhaPalmCooldown > 0) {
