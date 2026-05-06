@@ -112,6 +112,7 @@ export function registerXREvents() {
         gameStarted = false;
         gameWaveNumber = 0;
         setWaveNumber(0);
+        if (window.__resetShipHp) window.__resetShipHp();
 
         // 重置状态标志（只能通过 window.__ 桥接）
         setBuddhaPalmReady(false);

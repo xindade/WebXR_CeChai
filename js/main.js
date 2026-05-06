@@ -33,8 +33,9 @@ import {
 import {
     loadKnightModel, loadShipModel, initBalloonGroup,
     setPlayerStatsRef, setChoiceCardsActiveRef, onAllBalloonsDestroyed,
-    setWaveNumber,
-    balloons, spawnBalloons, updateBalloons, checkBulletBalloonCollisions,
+    setWaveNumber, clearAllBalloons, setOnBalloonShipCollision,
+    balloons, spawnBalloons, updateBalloons, updateWaveSpawning,
+    checkBulletBalloonCollisions,
     waveNumber
 } from './balloons.js';
 
@@ -47,6 +48,9 @@ import {
 
 // ── 粒子系统 ──
 import { initParticlePool, updateParticles } from './particles.js';
+
+// ── 碎片系统 ──
+import { initDebrisPool, updateDebris } from './debris.js';
 
 // ── 如来神掌 ──
 import {
@@ -67,6 +71,12 @@ import {
 
 // ── XR 会话 ──
 import { enterVR, registerXREvents, initVRButtons, gameStarted, gameWaveNumber } from './xr.js';
+
+// ── 船血系统 ──
+import { onBalloonHitShip, setOnRestartCardCallback, setSpawnBalloonsRef, setPlayPopSoundFn, resetShipHp } from './ship.js';
+
+// ── 音效 ──
+import { playBalloonPopSound } from './audio.js';
 
 // ── 配置 ──
 import { PLAYER_INITIAL_HP, PLAYER_INITIAL_SCORE, PLAYER_INITIAL_ATK } from './config.js';
@@ -162,6 +172,9 @@ async function initScene() {
     // 3. 粒子池
     initParticlePool();
 
+    // 3b. 碎片池
+    initDebrisPool();
+
     // 4. 子弹池
     initBulletPool();
 
@@ -197,10 +210,25 @@ async function initScene() {
     setChoiceCardsActiveRef(() => choiceCardsActive);
     setUIExtraBulletRef(() => extraBulletEnabled);
 
+    // 7b. 连接船血系统
+    setOnBalloonShipCollision(onBalloonHitShip);
+    setSpawnBalloonsRef(spawnBalloons);
+    setPlayPopSoundFn(() => playBalloonPopSound());
+    window.__clearAllBalloons = clearAllBalloons;
+    window.__gameWaveNumber = 0;
+    window.__resetShipHp = resetShipHp;
+
+    // 7c. 船血重开 → 赠送抽卡回调
+    setOnRestartCardCallback(() => {
+        console.log('🎴 重生赠送一次抽卡');
+        spawnChoiceCards();
+    });
+
     // 波次清空回调 → 弹出选择卡
     onAllBalloonsDestroyed(() => {
         if (typeof _dbgShow === 'function') _dbgShow('🎴 气球清空，弹出选择卡', '#ffdd44');
         spawnChoiceCards();
+        window.__gameWaveNumber = waveNumber;
     });
 
     // 选择卡清除后的回调 → 推进波次 + 解锁神掌（通过 window 全局，避免模块命名空间兼容问题）
@@ -267,10 +295,14 @@ function animate() {
     updateSkyTransition(dt);
     updateBuddhaPalmSkills(dt);
     updateParticles(dt);
+    updateDebris(dt);
 
     if (renderer.xr.isPresenting) {
         updateInputs();
         handleMovement(dt);
+
+        // 波次生成
+        updateWaveSpawning(dt);
 
         // 射击处理
         handleShooting(rightTrigger, leftTrigger);

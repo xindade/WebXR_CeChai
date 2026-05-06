@@ -2,12 +2,14 @@
 import * as THREE from 'three';
 import { rightGrip, leftGrip } from './input.js';
 import { balloons } from './balloons.js';
-import { BALLOON_COUNT } from './config.js';
+import { BALLOON_COUNT, SHIP_MAX_HP } from './config.js';
 import { roundRect } from './utils.js';
 import {
     buddhaPalmReady, buddhaPalmCooldown,
     buddhaPalmState, buddhaPalmTimer
 } from './buddhaPalm.js';
+import { getShipHp } from './ship.js';
+import { waveSpawnRemaining, wavePhaseTimer } from './balloons.js';
 import {
     UI_PANEL_WIDTH, UI_PANEL_HEIGHT,
     UI_PANEL_3D_WIDTH, UI_PANEL_3D_HEIGHT,
@@ -99,12 +101,18 @@ export function updateDebugPanel() {
 
     const activeBalloons = balloons.filter(b => b.userData.active).length;
     const extraStr = extraBulletEnabledRef() ? '✅' : '❌';
+    const shipHpVal = getShipHp();
+    const phaseStr = wavePhaseTimer < 15 ? '1(前方)' : wavePhaseTimer < 30 ? '2(前方+左右)' : '3(全方向)';
+    const remainStr = waveSpawnRemaining > 0 ? `${waveSpawnRemaining}待生成` : '已生成完毕';
     let lines = [
-        `❤️ 血量 ${playerStatsRef.hp}`,
+        `🚢 船血 ${shipHpVal}/${SHIP_MAX_HP}`,
+        `❤️ 玩家HP ${playerStatsRef.hp}`,
         `🎯 得分 ${playerStatsRef.score}`,
         `⚔️ 攻击 ${playerStatsRef.atk}`,
         `🎈 气球 ${activeBalloons}/${BALLOON_COUNT}`,
         `🔫 双弹 ${extraStr}`,
+        `🌊 波次 ${window.__gameWaveNumber || 0} 阶段${phaseStr}`,
+        `   ${remainStr}`,
     ];
     // 追加 VR 调试日志（后 3 条，显示在右手腕）
     const log = window.__debugLog || [];

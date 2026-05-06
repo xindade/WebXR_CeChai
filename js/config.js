@@ -361,3 +361,22 @@ export const MOON_CUT_ARC_RATIO = 0.42;
 export const CLOUD_MAIN_RADIUS = 0.8;
 export const CLOUD_OFFSETS = [[0.6, 0.2, 0.6], [-0.6, 0.1, 0.55]];
 export const CLOUD_GEOM_SEGMENTS = [8, 6];
+
+// ── 指南补充：波次生成 (balloons.js) ──
+export const WAVE_BASE_SPAWN_COUNT = 30;     // 每波基础生成总数
+export const SPAWN_BATCH_SIZE = 3;            // 每批生成数量
+export const SPAWN_MAX_ACTIVE = 10;           // 同屏活跃上限
+export const SPAWN_BATCH_INTERVAL = 1.0;      // 批次间隔(秒)
+
+// ── 指南补充：船血系统 (ship.js) ──
+export const SHIP_MAX_HP = 100;               // 船最大生命值
+export const SHIP_COLLISION_RADIUS = 2.5;     // 船碰撞半径(米)
+export const SHIP_REPEL_FORCE = 2.0;          // 船排斥强度
+
+// ── 指南补充：气球碰撞 (balloons.js) ──
+export const BALLOON_DAMAGE = 5;              // 气球撞船伤害
+export const BALLOON_REPEL_FORCE = 3.0;       // 气球互斥强度
+
+// ── 指南补充：碎片系统 (debris.js) ──
+export const DEBRIS_COUNT = 30;               // 碎片对象池大小
+export const DEBRIS_LIFE = 0.8;               // 碎片生命周期(秒)
