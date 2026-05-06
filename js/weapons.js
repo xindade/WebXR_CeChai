@@ -7,7 +7,14 @@ import { rightController, leftController, rightGrip, leftGrip } from './input.js
 import { initAudio, playShootSound } from './audio.js';
 import {
     SHOOT_COOLDOWN, BULLET_SPEED, BULLET_LIFE,
-    BULLET_POOL_SIZE, AK48_SCALE
+    BULLET_POOL_SIZE, AK48_SCALE,
+    BULLET_RADIUS, BULLET_GEOM_SEGMENTS,
+    BULLET_COLOR, BULLET_EMISSIVE, BULLET_EMISSIVE_INTENSITY,
+    MUZZLE_OFFSET_X, MUZZLE_OFFSET_Y, MUZZLE_OFFSET_Z,
+    AK48_ROTATION_Y,
+    EXTRA_BULLET_DELAY, BULLET_PITCH_DEG, BULLET_MAX_HEIGHT,
+    AK48_RIGHT_POS, AK48_RIGHT_ROT_X,
+    AK48_LEFT_POS, AK48_LEFT_ROT_X, AK48_LEFT_ROT_Y
 } from './config.js';
 
 // ── 模型引用 ──
@@ -24,11 +31,11 @@ export const bullets = [];
 export const bulletGroup = new THREE.Group();
 // scene.add(bulletGroup) 延迟到 initBulletPool() 中调用（此时 scene 才初始化完毕）
 
-const sharedBulletGeom = new THREE.SphereGeometry(0.02, 8, 8);
+const sharedBulletGeom = new THREE.SphereGeometry(BULLET_RADIUS, BULLET_GEOM_SEGMENTS, BULLET_GEOM_SEGMENTS);
 const sharedBulletMat = new THREE.MeshStandardMaterial({
-    color: 0xffaa00,
-    emissive: 0xff4400,
-    emissiveIntensity: 0.8
+    color: BULLET_COLOR,
+    emissive: BULLET_EMISSIVE,
+    emissiveIntensity: BULLET_EMISSIVE_INTENSITY
 });
 
 export const bulletPool = [];
@@ -107,7 +114,7 @@ function acquireBullet() {
 export function shootBullet(controller) {
     fireOneBullet(controller);
     if (window.__extraBulletEnabled) {
-        setTimeout(() => fireOneBullet(controller), 50);
+        setTimeout(() => fireOneBullet(controller), EXTRA_BULLET_DELAY);
     }
 }
 
@@ -119,12 +126,12 @@ function fireOneBullet(controller) {
     playShootSound();
 
     // 发射口在控制器本地坐标系中的位置
-    const muzzleLocal = new THREE.Vector3(0, 0, -0.2);
+    const muzzleLocal = new THREE.Vector3(MUZZLE_OFFSET_X, MUZZLE_OFFSET_Y, MUZZLE_OFFSET_Z);
     const origin = muzzleLocal.clone().applyMatrix4(controller.matrixWorld);
     const quat = controller.getWorldQuaternion(new THREE.Quaternion());
 
     // 俯仰偏移（本地空间计算，避免角度串扰）
-    const bulletPitch = -30 * Math.PI / 180; // 负=向下低头
+    const bulletPitch = -BULLET_PITCH_DEG * Math.PI / 180; // 负=向下低头
     const localPitchQuat = new THREE.Quaternion().setFromEuler(
         new THREE.Euler(bulletPitch, 0, 0)
     );
@@ -150,7 +157,7 @@ export function updateBullets(dt) {
         b.position.z += b.userData.vel.z * dt;
         b.userData.life -= dt;
 
-        if (b.userData.life <= 0 || b.position.y < 0 || b.position.y > 30) {
+        if (b.userData.life <= 0 || b.position.y < 0 || b.position.y > BULLET_MAX_HEIGHT) {
             b.userData.active = false;
             b.visible = false;
             bullets.splice(i, 1);
@@ -168,9 +175,9 @@ export function attachAK48() {
         if (child.isMesh) child.castShadow = true;
     });
 
-    gunInstance.position.set(0, -0.1, 0.01);   // <-- 位置 XYZ（米）
-    gunInstance.rotation.x = -20;               // <-- X轴旋转
-    gunInstance.rotation.y = Math.PI / 2;       // <-- Y轴旋转 90度（枪管朝前）
+    gunInstance.position.set(...AK48_RIGHT_POS);
+    gunInstance.rotation.x = AK48_RIGHT_ROT_X;
+    gunInstance.rotation.y = AK48_ROTATION_Y;     // <-- Y轴旋转（弧度）
 
     rightGrip.add(gunInstance);
     ak48Attached = true;
@@ -186,9 +193,9 @@ export function attachAK48ToLeft() {
         if (child.isMesh) child.castShadow = true;
     });
 
-    gunInstance.position.set(0, -0.1, 0.01);
-    gunInstance.rotation.x = -20;
-    gunInstance.rotation.y = -90 * Math.PI / 180;
+    gunInstance.position.set(...AK48_LEFT_POS);
+    gunInstance.rotation.x = AK48_LEFT_ROT_X;
+    gunInstance.rotation.y = -AK48_LEFT_ROT_Y * Math.PI / 180;
     // 左手镜像
     gunInstance.scale.x = -AK48_SCALE;
     gunInstance.scale.y = AK48_SCALE;

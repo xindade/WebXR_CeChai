@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { dolly } from './scene.js';
 import { renderer } from './scene.js';
+import { TRIGGER_THRESHOLD } from './config.js';
 
 // ── 摇杆输入状态 ──
 export const rightInput = { stickX: 0, stickY: 0 };
@@ -81,7 +82,7 @@ export function updateInputs() {
         else if (gp.axes.length >= 2) { sx = gp.axes[0]; sy = gp.axes[1]; }
 
         const triggerVal = gp.buttons[0]?.value || 0;
-        const trigger = triggerVal > 0.5;
+        const trigger = triggerVal > TRIGGER_THRESHOLD;
         const grip = gp.buttons[1]?.pressed || false;
         const stickBtn = gp.buttons[3]?.pressed || false;
 

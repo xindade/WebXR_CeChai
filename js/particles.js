@@ -1,7 +1,7 @@
 // ==================== 粒子爆炸特效 ====================
 import * as THREE from 'three';
 import { scene } from './scene.js';
-import { PARTICLE_COUNT, PARTICLE_LIFE } from './config.js';
+import { PARTICLE_COUNT, PARTICLE_LIFE, PARTICLE_RADIUS, PARTICLE_GEOM_SEG, PARTICLE_DAMPING } from './config.js';
 
 export const particleGroup = new THREE.Group();
 // scene.add(particleGroup) 延迟到 initParticlePool() 中调用
@@ -12,7 +12,7 @@ export const particlePool = [];
 export function initParticlePool() {
     scene.add(particleGroup); // 此时 scene 已初始化
     for (let i = 0; i < PARTICLE_COUNT; i++) {
-        const geom = new THREE.SphereGeometry(0.01, 4, 4);
+        const geom = new THREE.SphereGeometry(PARTICLE_RADIUS, PARTICLE_GEOM_SEG, PARTICLE_GEOM_SEG);
         const mat = new THREE.MeshBasicMaterial({
             color: 0xffffff,
             transparent: true,
@@ -60,7 +60,7 @@ export function updateParticles(dt) {
         if (!p.userData.active) continue;
 
         p.position.addScaledVector(p.userData.vel, dt);
-        p.userData.vel.multiplyScalar(0.98); // 阻尼
+        p.userData.vel.multiplyScalar(PARTICLE_DAMPING);
         p.userData.life -= dt;
         p.material.opacity = Math.max(0, p.userData.life / PARTICLE_LIFE);
 

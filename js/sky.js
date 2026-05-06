@@ -1,6 +1,13 @@
 // ==================== 日夜黄昏天空系统 ====================
 import * as THREE from 'three';
-import { skyPresets, skyCycle, DAY_SUN_AZ } from './config.js';
+import { skyPresets, skyCycle, DAY_SUN_AZ, SKY_TRANSITION_SPEED,
+    SUN_SPRITE_SCALE, MOON_SPRITE_SCALE, SUN_DIST, MOON_DIST,
+    SPRITE_OPACITY_OFFSET, SPRITE_OPACITY_RANGE,
+    STAR_ROT_BASE, STAR_ROT_INCREMENT,
+    STAR_OPACITY_BASE, STAR_OPACITY_INCREMENT,
+    STAR_FLICKER_BASE, STAR_FLICKER_AMP,
+    STAR_FLICKER_FREQ, STAR_FLICKER_LAYER_OFFSET
+} from './config.js';
 import {
     renderer, scene, camera, dolly,
     skyDome, skyDomeMat, starLayers,
@@ -53,7 +60,7 @@ export function initSky() {
         transparent: true, depthWrite: false, blending: THREE.NormalBlending, opacity: 1
     });
     sunSprite = new THREE.Sprite(sunSpriteMat);
-    sunSprite.scale.set(8, 8, 1);
+    sunSprite.scale.set(...SUN_SPRITE_SCALE);
     dolly.add(sunSprite);
 
     // ── 月牙精灵 ──
@@ -63,7 +70,7 @@ export function initSky() {
         transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0
     });
     moonSprite = new THREE.Sprite(moonSpriteMat);
-    moonSprite.scale.set(5, 5, 1);
+    moonSprite.scale.set(...MOON_SPRITE_SCALE);
     dolly.add(moonSprite);
 
     // 尝试加载图片替换
@@ -114,7 +121,7 @@ export function cycleSky(direction = 1) {
  */
 export function updateSkyTransition(dt) {
     const p = skyPresets[skyTarget];
-    const ease = 1 - Math.exp(-0.12 * dt); // ~30秒完成95%过渡
+    const ease = 1 - Math.exp(-SKY_TRANSITION_SPEED * dt); // ~30秒完成95%过渡
 
     skyNow.bg.lerp(new THREE.Color(p.bg), ease);
     skyNow.fog.lerp(new THREE.Color(p.fog), ease);
@@ -164,11 +171,11 @@ export function updateSkyTransition(dt) {
         sprite.position.y = Math.sin(el) * dist + 1.6;
         sprite.position.z = Math.cos(azimuth) * cosEl * dist;
     }
-    placeSprite(sunSprite, sunAzimuth, skyNow.sunElev, 45);
-    placeSprite(moonSprite, skyNow.moonAz, skyNow.moonElev, 42);
+    placeSprite(sunSprite, sunAzimuth, skyNow.sunElev, SUN_DIST);
+    placeSprite(moonSprite, skyNow.moonAz, skyNow.moonElev, MOON_DIST);
 
-    sunSprite.material.opacity  = Math.max(0, Math.min(1, (skyNow.sunElev + 3) / 8));
-    moonSprite.material.opacity = Math.max(0, Math.min(1, (skyNow.moonElev + 3) / 8));
+    sunSprite.material.opacity  = Math.max(0, Math.min(1, (skyNow.sunElev + SPRITE_OPACITY_OFFSET) / SPRITE_OPACITY_RANGE));
+    moonSprite.material.opacity = Math.max(0, Math.min(1, (skyNow.moonElev + SPRITE_OPACITY_OFFSET) / SPRITE_OPACITY_RANGE));
 
     // ── 星空闪烁 + 缓慢旋转 ──
     const starsActive = skyNow.stars > 0.01;
@@ -176,9 +183,9 @@ export function updateSkyTransition(dt) {
         const now = performance.now() * 0.001;
         starLayers.forEach((sf, idx) => {
             sf.visible = true;
-            sf.rotation.y += dt * (0.015 + idx * 0.01);
-            const base = skyNow.stars * (0.7 + idx * 0.15);
-            const flicker = 0.85 + 0.15 * Math.sin(now * 1.7 + idx * 2.1);
+            sf.rotation.y += dt * (STAR_ROT_BASE + idx * STAR_ROT_INCREMENT);
+            const base = skyNow.stars * (STAR_OPACITY_BASE + idx * STAR_OPACITY_INCREMENT);
+            const flicker = STAR_FLICKER_BASE + STAR_FLICKER_AMP * Math.sin(now * STAR_FLICKER_FREQ + idx * STAR_FLICKER_LAYER_OFFSET);
             sf.material.opacity = Math.min(1, base * flicker);
         });
     } else {

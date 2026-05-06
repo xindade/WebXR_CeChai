@@ -8,8 +8,15 @@ import { gltfLoader } from './weapons.js';
 import {
     BALLOON_COUNT, BALLOON_HP, BALLOON_SPEED, BALLOON_SPAWN_RADIUS,
     BALLOON_RADIUS, BALLOON_SCORE, BALLOON_COLORS,
-    KNIGHT_HP, KNIGHT_SCORE, KNIGHT_SCALE, KNIGHT_RADIUS,
-    SHIP_SCALE, SHIP_POS, SHIP_ROT
+    BALLOON_GEOM_SEGMENTS, BALLOON_MAT_ROUGHNESS, BALLOON_MAT_METALNESS,
+    BALLOON_EMISSIVE_I, BALLOON_EMISSIVE_HIT, BALLOON_HIT_DURATION,
+    BALLOON_MIN_HEIGHT, BALLOON_HEIGHT_RANGE,
+    BALLOON_SPAWN_ANGLE_JITTER, BALLOON_SPAWN_RADIUS_JITTER,
+    BALLOON_FLOAT_FREQ, BALLOON_FLOAT_AMP,
+    BALLOON_COLLISION_BUFFER,
+    KNIGHT_HP, KNIGHT_SCORE, KNIGHT_SCALE, KNIGHT_RADIUS, KNIGHT_MAX_COUNT,
+    SHIP_SCALE, SHIP_POS, SHIP_ROT,
+    CAMERA_HEIGHT
 } from './config.js';
 
 // ── 气球列表 ──
@@ -83,15 +90,15 @@ export function loadShipModel() {
 
 // ── 创建普通气球 ──
 function createBalloon(x, y, z) {
-    const geom = new THREE.SphereGeometry(BALLOON_RADIUS, 16, 16);
+    const geom = new THREE.SphereGeometry(BALLOON_RADIUS, BALLOON_GEOM_SEGMENTS, BALLOON_GEOM_SEGMENTS);
     const color = BALLOON_COLORS[Math.floor(Math.random() * BALLOON_COLORS.length)];
     const mat = new THREE.MeshStandardMaterial({
         map: isBalloonTexLoaded() ? balloonTex : null,
         color: color,
-        roughness: 0.3,
-        metalness: 0.1,
+        roughness: BALLOON_MAT_ROUGHNESS,
+        metalness: BALLOON_MAT_METALNESS,
         emissive: color,
-        emissiveIntensity: 0.15
+        emissiveIntensity: BALLOON_EMISSIVE_I
     });
     const balloon = new THREE.Mesh(geom, mat);
     balloon.position.set(x, y, z);
@@ -145,7 +152,7 @@ export function spawnBalloons() {
     balloons.length = 0;
 
     const knightCount = (waveNumber >= 1)
-        ? Math.min(3, 1 + Math.floor(Math.random() * 3))
+        ? Math.min(KNIGHT_MAX_COUNT, 1 + Math.floor(Math.random() * KNIGHT_MAX_COUNT))
         : 0;
     const normalCount = BALLOON_COUNT - knightCount;
 
@@ -158,11 +165,11 @@ export function spawnBalloons() {
     const knightIndices = new Set(indices.slice(0, knightCount));
 
     for (let i = 0; i < BALLOON_COUNT; i++) {
-        const angle = (Math.PI * 2 / BALLOON_COUNT) * i + Math.random() * 0.5;
-        const r = BALLOON_SPAWN_RADIUS + Math.random() * 3;
+        const angle = (Math.PI * 2 / BALLOON_COUNT) * i + Math.random() * BALLOON_SPAWN_ANGLE_JITTER;
+        const r = BALLOON_SPAWN_RADIUS + Math.random() * BALLOON_SPAWN_RADIUS_JITTER;
         const x = playerPos.x + Math.cos(angle) * r;
         const z = playerPos.z + Math.sin(angle) * r;
-        const y = 1.5 + Math.random() * 3;
+        const y = BALLOON_MIN_HEIGHT + Math.random() * BALLOON_HEIGHT_RANGE;
         if (knightIndices.has(i)) {
             createKnightBalloon(x, y, z);
         } else {
@@ -174,7 +181,7 @@ export function spawnBalloons() {
 // ── 更新气球AI ──
 export function updateBalloons(dt) {
     const playerPos = dolly.position.clone();
-    playerPos.y += 1.6;
+    playerPos.y += CAMERA_HEIGHT;
 
     for (let i = balloons.length - 1; i >= 0; i--) {
         const b = balloons[i];
@@ -192,7 +199,7 @@ export function updateBalloons(dt) {
             b.lookAt(playerPos);
         }
 
-        b.position.y += Math.sin(performance.now() * 0.003 + i) * 0.002;
+        b.position.y += Math.sin(performance.now() * BALLOON_FLOAT_FREQ + i) * BALLOON_FLOAT_AMP;
     }
 }
 
@@ -206,14 +213,14 @@ export function checkBulletBalloonCollisions() {
 
             const hitRadius = balloon.userData.radius || BALLOON_RADIUS;
             const dist = bullet.position.distanceTo(balloon.position);
-            if (dist < hitRadius + 0.05) {
+            if (dist < hitRadius + BALLOON_COLLISION_BUFFER) {
                 balloon.userData.hp -= (playerStats ? playerStats.atk : 30);
 
                 if (!balloon.userData.isKnight && balloon.material.emissiveIntensity !== undefined) {
-                    balloon.material.emissiveIntensity = 0.5;
+                    balloon.material.emissiveIntensity = BALLOON_EMISSIVE_HIT;
                     setTimeout(() => {
-                        if (balloon.userData) balloon.material.emissiveIntensity = 0.15;
-                    }, 100);
+                        if (balloon.userData) balloon.material.emissiveIntensity = BALLOON_EMISSIVE_I;
+                    }, BALLOON_HIT_DURATION);
                 }
 
                 if (balloon.userData.hp <= 0) {

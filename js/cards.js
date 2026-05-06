@@ -2,7 +2,15 @@
 import * as THREE from 'three';
 import { dolly, camera } from './scene.js';
 import { leftController } from './input.js';
-import { choiceOptions, CHOICE_CARD_DISTANCE } from './config.js';
+import { choiceOptions, CHOICE_CARD_DISTANCE,
+    UI_PANEL_WIDTH, LEFT_UI_PANEL_HEIGHT,
+    PLAYER_INITIAL_HP, PLAYER_INITIAL_ATK, PLAYER_INITIAL_SCORE,
+    CARD_OUTER_RADIUS, CARD_BORDER_WIDTH,
+    CARD_INNER_OFFSET, CARD_INNER_RADIUS,
+    CARD_TITLE_FONT, CARD_TITLE_POS, CARD_HINT_FONT, CARD_HINT_POS,
+    CARD_3D_SIZE, CARD_CAM_OFFSET_Y, CARD_SPACING,
+    CARD_TIMEOUT, CARD_COLLISION_RADIUS
+} from './config.js';
 import { roundRect } from './utils.js';
 
 // ── 状态 ──
@@ -27,29 +35,31 @@ export function initChoiceCardGroup() {
  */
 function createChoiceCard(option, index) {
     const canvas = document.createElement('canvas');
-    canvas.width = 512;
-    canvas.height = 256;
+    canvas.width = UI_PANEL_WIDTH;
+    canvas.height = LEFT_UI_PANEL_HEIGHT;
     const ctx = canvas.getContext('2d');
 
     ctx.fillStyle = `rgba(${option.color.r},${option.color.g},${option.color.b},0.9)`;
-    roundRect(ctx, 0, 0, 512, 256, 32);
+    roundRect(ctx, 0, 0, UI_PANEL_WIDTH, LEFT_UI_PANEL_HEIGHT, CARD_OUTER_RADIUS);
     ctx.fill();
 
     ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 8;
-    roundRect(ctx, 4, 4, 504, 248, 28);
+    ctx.lineWidth = CARD_BORDER_WIDTH;
+    roundRect(ctx, CARD_INNER_OFFSET, CARD_INNER_OFFSET,
+        UI_PANEL_WIDTH - CARD_INNER_OFFSET * 2, LEFT_UI_PANEL_HEIGHT - CARD_INNER_OFFSET * 2,
+        CARD_INNER_RADIUS);
     ctx.stroke();
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 48px "Microsoft YaHei", sans-serif';
+    ctx.font = CARD_TITLE_FONT;
     ctx.textAlign = 'center';
-    ctx.fillText(option.label, 256, 140);
+    ctx.fillText(option.label, CARD_TITLE_POS[0], CARD_TITLE_POS[1]);
 
-    ctx.font = '28px "Microsoft YaHei", sans-serif';
-    ctx.fillText('← 用左手柄碰触 →', 256, 190);
+    ctx.font = CARD_HINT_FONT;
+    ctx.fillText('← 用左手柄碰触 →', CARD_HINT_POS[0], CARD_HINT_POS[1]);
 
     const texture = new THREE.CanvasTexture(canvas);
-    const geom = new THREE.PlaneGeometry(0.5, 0.3);
+    const geom = new THREE.PlaneGeometry(...CARD_3D_SIZE);
     const mat = new THREE.MeshBasicMaterial({
         map: texture,
         transparent: true,
@@ -93,7 +103,7 @@ export function spawnChoiceCards() {
     camLocalDir.normalize();
 
     const basePos = camLocalPos.clone().add(camLocalDir.clone().multiplyScalar(CHOICE_CARD_DISTANCE));
-    basePos.y = camLocalPos.y - 0.2;
+    basePos.y = camLocalPos.y + CARD_CAM_OFFSET_Y;
 
     const camLocalRight = new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion);
     camLocalRight.y = 0;
@@ -103,7 +113,7 @@ export function spawnChoiceCards() {
 
     for (let i = 0; i < 3; i++) {
         const card = createChoiceCard(choiceOptions[i], i);
-        const offset = (i - 1) * 0.55;
+        const offset = (i - 1) * CARD_SPACING;
         card.position.copy(basePos).addScaledVector(camLocalRight, offset);
         card.lookAt(faceTarget);
         choiceCardGroup.add(card);
@@ -117,7 +127,7 @@ export function spawnChoiceCards() {
             console.log('⏱️ 选择卡超时，自动跳过进入下一轮');
             clearChoiceCards();
         }
-    }, 10000);
+    }, CARD_TIMEOUT);
 }
 
 // ── 清除后回调（由 main.js 注入，处理波次推进 / 神掌解锁）──
@@ -165,11 +175,11 @@ export function checkLeftHandChoiceCardCollision() {
         card.getWorldPosition(cardWorldPos);
 
         const dist = leftPos.distanceTo(cardWorldPos);
-        if (dist < 0.4) {
+        if (dist < CARD_COLLISION_RADIUS) {
             const index = card.userData.index;
             const flags = { extraBulletEnabled: false };
             choiceOptions[index].effect(
-                window.__playerStats || { hp: 100, atk: 30, score: 0 },
+                window.__playerStats || { hp: PLAYER_INITIAL_HP, atk: PLAYER_INITIAL_ATK, score: PLAYER_INITIAL_SCORE },
                 flags
             );
             if (flags.extraBulletEnabled) {

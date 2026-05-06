@@ -10,6 +10,7 @@ import {
 } from './buddhaPalm.js';
 import { choiceCardsActive, choiceCardTimeout, clearChoiceCards, choiceCardGroup, extraBulletEnabled } from './cards.js';
 import { hideVREntry, showVREntry } from './ui.js';
+import { VR_ATTACH_GUN_DELAY, VR_SPAWN_DELAY } from './config.js';
 
 // ── 游戏会话状态 ──
 export let gameStarted = false;
@@ -81,9 +82,9 @@ export function registerXREvents() {
         setShadow(false);
 
         // 延迟附加枪支（等手柄就绪）
-        setTimeout(() => { attachAK48(); }, 100);
+        setTimeout(() => { attachAK48(); }, VR_ATTACH_GUN_DELAY);
         if (leftHandGunEnabled) {
-            setTimeout(() => { attachAK48ToLeft(); }, 100);
+            setTimeout(() => { attachAK48ToLeft(); }, VR_ATTACH_GUN_DELAY);
         }
 
         // VR 开始时生成气球
@@ -93,7 +94,7 @@ export function registerXREvents() {
                 spawnBalloons();
                 console.log('🎈 气球战斗开始！');
             }
-        }, 500);
+        }, VR_SPAWN_DELAY);
     });
 
     renderer.xr.addEventListener('sessionend', () => {

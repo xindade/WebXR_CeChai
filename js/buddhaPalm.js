@@ -6,7 +6,15 @@ import { balloons, checkAllBalloonsDestroyed } from './balloons.js';
 import { spawnParticles } from './particles.js';
 import { playBalloonPopSound } from './audio.js';
 import { gltfLoader } from './weapons.js';
-import { BUDDHA_COOLDOWN, AIM_TIMEOUT, BALLOON_SCORE, KNIGHT_SCORE } from './config.js';
+import { BUDDHA_COOLDOWN, AIM_TIMEOUT, BALLOON_SCORE, KNIGHT_SCORE,
+    BUDDHA_PROMPT_SCALE, BUDDHA_ATTACH_SCALE,
+    BUDDHA_ATTACH_POS, BUDDHA_ATTACH_ROT, BUDDHA_PROMPT_POS,
+    BUDDHA_PREVIEW_SCALE, BUDDHA_PREVIEW_POS,
+    BUDDHA_RELEASE_SCALE, BUDDHA_RELEASE_FORWARD, BUDDHA_RELEASE_HEIGHT,
+    BUDDHA_FALL_DURATION, BUDDHA_KILL_RADIUS, BUDDHA_DAMAGE,
+    BUDDHA_PREVIEW_DIST, BUDDHA_PREVIEW_Y,
+    BUDDHA_PARTICLE_COLOR, BUDDHA_PARTICLE_COUNT, BUDDHA_CLEANUP_DELAY
+} from './config.js';
 
 // ── 状态 ──
 export let buddhaPalmModel = null;
@@ -44,7 +52,7 @@ export function createPromptSprite() {
     const tex = new THREE.CanvasTexture(canvas);
     const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, depthWrite: false });
     const s = new THREE.Sprite(mat);
-    s.scale.set(2, 0.5, 1);
+    s.scale.set(...BUDDHA_PROMPT_SCALE);
     s.visible = false;
     return s;
 }
@@ -70,15 +78,15 @@ export function loadBuddhaPalmModel() {
 export function attachBuddhaPalmToLeft() {
     if (!buddhaPalmModel || !leftGrip || buddhaPalmAttached) return;
     const palm = buddhaPalmModel.clone();
-    palm.scale.setScalar(0.2);              // <-- 左手神掌大小
-    palm.position.set(0, -0.08, 0.03);      // <-- 左手神掌位置(X,Y,Z)
-    palm.rotation.set(-90, 0, 0);           // <-- 左手神掌旋转(X,Y,Z)弧度
+    palm.scale.setScalar(BUDDHA_ATTACH_SCALE);
+    palm.position.set(...BUDDHA_ATTACH_POS);
+    palm.rotation.set(...BUDDHA_ATTACH_ROT);
     palm.traverse(c => { if (c.isMesh) c.castShadow = true; });
     palm.userData = { isBuddhaPalm: true };
     leftGrip.add(palm);
     buddhaPalmAttached = true;
     promptSprite = createPromptSprite();
-    promptSprite.position.set(0, 1.8, -1.5); // <-- 提示文字位置(X,Y,Z)
+    promptSprite.position.set(...BUDDHA_PROMPT_POS);
     dolly.add(promptSprite);
     console.log('🖐️ 如来神掌已装备到左手');
 }
@@ -94,7 +102,7 @@ export function enterAimingMode() {
 
     if (buddhaPalmModel && !previewPalm) {
         previewPalm = buddhaPalmModel.clone();
-        previewPalm.scale.setScalar(2.0);                  // <-- 预览神掌大小
+        previewPalm.scale.setScalar(BUDDHA_PREVIEW_SCALE);
         previewPalm.rotation.set(-Math.PI / 2, 0, 0);
         previewPalm.traverse(c => { if (c.isMesh) c.castShadow = true; });
         previewPalm.userData = { isPreview: true };
@@ -102,7 +110,7 @@ export function enterAimingMode() {
     }
     if (previewPalm) {
         previewPalm.visible = true;
-        previewPalm.position.set(0, 0.5, -4);
+        previewPalm.position.set(...BUDDHA_PREVIEW_POS);
     }
     if (promptSprite) promptSprite.visible = true;
     console.log('🎯 瞄准：再按握柄释放，或' + AIM_TIMEOUT + '秒自动');
@@ -119,21 +127,21 @@ export function releaseBuddhaPalm() {
     buddhaPalmCooldown = BUDDHA_COOLDOWN;
 
     const palm = buddhaPalmModel.clone();
-    palm.scale.setScalar(20.0);              // <-- 释放神掌大小(20倍)
-    palm.rotation.set(-Math.PI / 2, 0, 0);  // <-- 掌心朝下
+    palm.scale.setScalar(BUDDHA_RELEASE_SCALE);
+    palm.rotation.set(-Math.PI / 2, 0, 0);
     palm.traverse(c => { if (c.isMesh) c.castShadow = true; });
     const camWorld = new THREE.Vector3();
     camera.getWorldPosition(camWorld);
-    palm.position.copy(camWorld).addScaledVector(aimDirection, 3); // <-- 前方5米
-    palm.position.y += 20;                   // <-- 头顶上方15米
+    palm.position.copy(camWorld).addScaledVector(aimDirection, BUDDHA_RELEASE_FORWARD);
+    palm.position.y += BUDDHA_RELEASE_HEIGHT;
     palm.userData = {
         isBuddhaSkill: true,
         elapsed: 0,
         startY: palm.position.y,
         targetY: camWorld.y,
-        fallDuration: 0.5,          // <-- 下落时间(秒)
-        killRadius: 10,             // <-- 碰撞半径(米)
-        damage: 1000                // <-- 伤害值
+        fallDuration: BUDDHA_FALL_DURATION,
+        killRadius: BUDDHA_KILL_RADIUS,
+        damage: BUDDHA_DAMAGE
     };
     scene.add(palm);
     buddhaPalmSkills.push(palm);
@@ -150,8 +158,8 @@ export function updateBuddhaPalmSkills(dt) {
     if (buddhaPalmState === 'AIMING') {
         buddhaPalmTimer -= dt;
         if (previewPalm && previewPalm.visible) {
-            const offset = aimDirection.clone().multiplyScalar(4);
-            offset.y = 0.5;
+            const offset = aimDirection.clone().multiplyScalar(BUDDHA_PREVIEW_DIST);
+            offset.y = BUDDHA_PREVIEW_Y;
             previewPalm.position.copy(offset);
         }
         if (promptSprite && promptSprite.visible && buddhaPalmTimer > 0) {
@@ -205,11 +213,11 @@ export function updateBuddhaPalmSkills(dt) {
                     }
                 }
             });
-            console.log('🖐 神掌击杀 ' + killed + '（20x, 半径10, 伤害1000）');
-            spawnParticles(pw, 0xffdd44, 80);
+            console.log('🖐 神掌击杀 ' + killed + '（20x, 半径' + BUDDHA_KILL_RADIUS + ', 伤害' + BUDDHA_DAMAGE + '）');
+            spawnParticles(pw, BUDDHA_PARTICLE_COLOR, BUDDHA_PARTICLE_COUNT);
             playBalloonPopSound();
             checkAllBalloonsDestroyed();
-            ud.cleanupDelay = 0.3; // <-- 落地后消失延迟
+            ud.cleanupDelay = BUDDHA_CLEANUP_DELAY;
         }
 
         if (ud.cleanupDelay !== undefined) {
