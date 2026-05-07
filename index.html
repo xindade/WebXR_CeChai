@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>VR 热气球托盘场景 - Ak48压缩版</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="loading">
+        <div id="loading-spinner"></div>
+        <div>加载中...</div>
+    </div>
+    <div id="vr-entry">
+        <div id="btn-container">
+            <button id="enter-vr-btn" class="vr-btn">🎈 正常开始游戏</button>
+            <button id="enter-vr-left-hand" class="vr-btn vr-btn-alt">🔫 左手持枪模式</button>
+        </div>
+    </div>
+    <div id="vr-hints" style="display:none"></div>
+    <div id="status-msg"></div>
+    <div id="time-switch">
+        <button id="btn-dusk" class="time-btn">🌅 黄昏</button>
+        <button id="btn-day" class="time-btn active">☀️ 白天</button>
+        <button id="btn-night" class="time-btn">🌙 夜晚</button>
+    </div>
+    <div id="sky-hint">VR中按左手 X/Y 键切换天空 · 30秒渐变过渡</div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "./three.module.js",
+                "three/addons/": "./jsm/"
+            }
+        }
+    </script>
+
+    <!-- 全局错误捕获（在模块加载之前注册） -->
+    <script>
+        const _dbg = document.getElementById('loading');
+        const _dbgSpinner = document.getElementById('loading-spinner');
+        let _dbgLines = [];
+        
+        // VR 手腕日志环形缓冲（供 ui.js 读取）
+        window.__debugLog = [];
+        window.__debugLogMax = 8;
+
+        function _dbgShow(msg, color) {
+            _dbgLines.push('<div style="color:' + (color || '#fff') + '">' + msg + '</div>');
+            if (_dbgLines.length > 12) _dbgLines.shift();
+            _dbg.innerHTML = (_dbgSpinner ? _dbgSpinner.outerHTML : '') + _dbgLines.join('');
+            // 同时写入 VR 手腕日志
+            window.__debugLog.push((color === '#ff4444' ? '❌' : color === '#ffaa00' ? '⚠️' : '') + msg);
+            if (window.__debugLog.length > window.__debugLogMax) window.__debugLog.shift();
+        }
+
+        // 捕获全局错误
+        window.addEventListener('error', function(e) {
+            if (e.target && e.target.tagName === 'SCRIPT') {
+                _dbgShow('❌ 模块加载失败: ' + (e.target.src || 'inline'), '#ff4444');
+            } else {
+                _dbgShow('❌ ' + e.message + ' @ ' + e.filename + ':' + e.lineno, '#ff4444');
+                _dbgShow('  → ' + (e.error ? e.error.stack.split('\\n').slice(0,3).join(' | ') : ''), '#ff6666');
+            }
+        }, true);
+
+        // 捕获未处理的 Promise 拒绝
+        window.addEventListener('unhandledrejection', function(e) {
+            _dbgShow('⭕ Promise reject: ' + (e.reason ? e.reason.message || e.reason : ''), '#ffaa00');
+        });
+
+        // 捕获 console.error
+        const _origError = console.error;
+        console.error = function() {
+            _dbgShow('⚠️ ' + Array.from(arguments).join(' '), '#ffaa00');
+            return _origError.apply(console, arguments);
+        };
+
+        _dbgShow('🚀 开始加载模块...', '#88ccff');
+    </script>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
